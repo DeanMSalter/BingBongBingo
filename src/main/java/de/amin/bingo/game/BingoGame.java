@@ -4,28 +4,37 @@ import de.amin.bingo.BingoPlugin;
 import de.amin.bingo.game.board.BingoBoard;
 import de.amin.bingo.game.board.BingoMaterial;
 import de.amin.bingo.game.board.map.BoardRenderer;
-import de.amin.bingo.team.TeamManager;
 import de.amin.bingo.utils.Config;
-import org.bukkit.scoreboard.Team;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
 
 import java.util.*;
 
 public class BingoGame {
 
     private BingoPlugin plugin;
-    private TeamManager teamManager;
-    private HashMap<Team, BingoBoard> boards;
+    private HashMap<Object, BingoBoard> boards;
     BingoMaterial[] items = new BingoMaterial[Config.BOARD_SIZE];
     private BoardRenderer renderer;
-    private final List<UUID> rejoinPlayer;
-
-    public BingoGame(BingoPlugin plugin, TeamManager teamManager) {
+    private final List<UUID> players;
+    private ItemStack boardItem;
+    public BingoGame(BingoPlugin plugin, List<UUID> players) {
         this.plugin = plugin;
-        this.teamManager = teamManager;
+        this.players = players;
         boards = new HashMap<>();
-        rejoinPlayer = new ArrayList<>();
     }
-
+    public void setBoardItem(ItemStack boardItem) {
+        this.boardItem = boardItem;
+    }
+    public ItemStack getBoardItem() {
+        return this.boardItem;
+    }
     public void createBoards() {
 
         //generation of random items
@@ -36,14 +45,27 @@ public class BingoGame {
             }
             items[i] = bingoMaterial;
         }
+//        boards.put(team, new BingoBoard(items));
 
-        teamManager.getTeams().forEach(team -> {
-            boards.put(team, new BingoBoard(items));
-        });
+//        .getTeams().forEach(team -> {
+//        });
 
     }
+    public void createBoards(List<UUID> players) {
+        //generation of random items
+        for (int i = 0; i < items.length; i++) {
+            BingoMaterial bingoMaterial = getRandomMaterial();
+            while (Arrays.asList(items).contains(bingoMaterial)) {
+                bingoMaterial = getRandomMaterial();
+            }
+            items[i] = bingoMaterial;
+        }
+        for (UUID player: players) {
+            boards.put(player, new BingoBoard(items));
+        }
+    }
 
-    public boolean checkWin(Team team) {
+    public boolean checkWin(Player player) {
         int[][] winSituations = new int[][]{
                 //horizonzal
                 {0, 1, 2, 3},
@@ -62,7 +84,7 @@ public class BingoGame {
         for (int[] winSituation : winSituations) {
             boolean win = true;
             for (int i : winSituation) {
-                if (!getBoard(team).getItems()[i].isFound()) {
+                if (!getBoard(player).getItems()[i].isFound()) {
                     win = false;
                 }
             }
@@ -73,8 +95,8 @@ public class BingoGame {
         return false;
     }
 
-    public BingoBoard getBoard(Team team) {
-        return boards.get(team);
+    public BingoBoard getBoard(Player player) {
+        return boards.get(player.getUniqueId());
     }
 
     public BingoMaterial[] getItems() {
@@ -85,7 +107,7 @@ public class BingoGame {
         return BingoMaterial.values()[new Random().nextInt(BingoMaterial.values().length)];
     }
 
-    public List<UUID> getRejoinPlayer() {
-        return rejoinPlayer;
+    public List<UUID> getPlayers() {
+        return this.players;
     }
 }

@@ -6,15 +6,13 @@ import de.amin.bingo.game.board.BingoItem;
 import de.amin.bingo.game.board.map.BoardRenderer;
 import de.amin.bingo.gamestates.GameState;
 import de.amin.bingo.gamestates.GameStateManager;
-import de.amin.bingo.team.BingoTeam;
-import de.amin.bingo.team.TeamManager;
 import de.amin.bingo.utils.Config;
 import de.amin.bingo.utils.Localization;
 import de.amin.bingo.utils.TimeUtils;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import org.bukkit.*;
-import org.bukkit.attribute.Attribute;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.map.MapRenderer;
@@ -25,6 +23,8 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.RenderType;
 import org.bukkit.scoreboard.Scoreboard;
 
+import java.util.UUID;
+
 public class MainState extends GameState {
 
     private int time = Config.GAME_DURATION;
@@ -34,45 +34,25 @@ public class MainState extends GameState {
     private final GameStateManager gameStateManager;
     private final BingoGame game;
     private final BoardRenderer renderer;
-    private final TeamManager teamManager;
 
 
-    public MainState(BingoPlugin plugin, GameStateManager gameStateManager, BingoGame game, BoardRenderer renderer, TeamManager teamManager) {
+    public MainState(BingoPlugin plugin, GameStateManager gameStateManager, BingoGame game, BoardRenderer renderer) {
         this.plugin = plugin;
         this.gameStateManager = gameStateManager;
         this.game = game;
         this.renderer = renderer;
-        this.teamManager = teamManager;
     }
 
     @Override
     public void start() {
-        game.createBoards();
+        game.createBoards(this.game.getPlayers());
         renderer.updateImages();
         ItemStack boardMap = getRenderedMapItem();
+        game.setBoardItem(boardMap);
 
-        plugin.getServer().getOnlinePlayers().forEach(player -> {
-            player.setLevel(0);
-            player.setHealth(player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue());
-            player.setFoodLevel(100);
-            player.getInventory().clear();
-            player.getInventory().setItemInOffHand(boardMap);
-            player.teleport(player.getWorld().getSpawnLocation());
-
-            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1, 1);
-            player.sendMessage(Localization.get(player, "game.mainstate.start"));
-
-            if (teamManager.getTeam(player) == null) {
-                BingoTeam bingoTeam = teamManager.addToSmallest(player);
-                player.sendMessage(Localization.get(player, "team.auto_assign", bingoTeam.getLocalizedName(player)));
-            }
-
-        });
-
-        WorldBorder border = plugin.getServer().getWorlds().get(0).getWorldBorder();
-        border.setCenter(0, 0);
-        border.setSize(Config.BORDER_SIZE);
-
+        for(UUID player: this.game.getPlayers()){
+            Bukkit.getPlayer(player).getInventory().addItem(boardMap);
+        }
 
         startTimer();
     }
@@ -90,40 +70,42 @@ public class MainState extends GameState {
         score.setDisplaySlot(DisplaySlot.PLAYER_LIST);
 
         gameLoop = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
-            plugin.getServer().getOnlinePlayers().forEach(player -> {
-
-                score.getScore(player.getName()).setScore(game.getBoard(teamManager.getTeam(player)).getFoundItems());
+            this.game.getPlayers().forEach(playerID -> {
+                Player player = Bukkit.getPlayer(playerID);
+                score.getScore(player.getName()).setScore(game.getBoard(player).getFoundItems());
 
                 //check for all players if they have a new item from the board
-                for (BingoItem item : game.getBoard(teamManager.getTeam(player)).getItems()) {
+                for (BingoItem item : game.getBoard(player).getItems()) {
                     if (!item.isFound()) {
                         for (ItemStack content : player.getInventory().getContents()) {
                             if (content != null && content.getType().equals(item.getMaterial())) {
                                 item.setFound(true);
-                                plugin.getServer().broadcastMessage(Localization.get(player, "game.mainstate.itemfound", teamManager.getTeam(player).getColor() + player.getName(),
-                                        String.valueOf(game.getBoard(teamManager.getTeam(player)).getFoundItems()),
+                                plugin.getServer().broadcastMessage(Localization.get(player, "game.mainstate.itemfound",
+                                        String.valueOf(game.getBoard(player).getFoundItems()),
                                         String.valueOf(Config.BOARD_SIZE)));
-                                plugin.getServer().getOnlinePlayers().forEach(all -> all.playSound(all.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1));
+                                this.game.getPlayers().forEach(playerIDAll -> {
+                                    Player playerAll = Bukkit.getPlayer(playerIDAll);
+                                    playerAll.playSound(playerAll.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
+                                });
                             }
                         }
                     }
                 }
-            });
-
-            teamManager.getTeams().forEach(team -> {
-                if (game.checkWin(team)) {
-                    Bukkit.getOnlinePlayers().forEach(player -> {
-                        player.sendMessage(Localization.get(player, "game.mainstate.win", BingoTeam.get(team.getName()).getLocalizedName(player)));
+                if (game.checkWin(player)) {
+                    game.getPlayers().forEach(playerUUID -> {
+                        Bukkit.getPlayer(playerUUID).sendMessage(Localization.get(player, "game.mainstate.win"));
                     });
                     score.unregister();
                     gameStateManager.setGameState(GameState.END_STATE);
                 }
             });
+
         }, 0, 5);
 
         timerTask = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             if (time > 0) {
-                plugin.getServer().getOnlinePlayers().forEach(player -> {
+                this.game.getPlayers().forEach(playerID -> {
+                    Player player = Bukkit.getPlayer(playerID);
                     player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new ComponentBuilder(ChatColor.GREEN + TimeUtils.formatTime(time)).create());
 
                     switch (time) {
@@ -143,7 +125,8 @@ public class MainState extends GameState {
 
                 time--;
             } else {
-                plugin.getServer().getOnlinePlayers().forEach(player -> {
+                this.game.getPlayers().forEach(playerID -> {
+                    Player player = Bukkit.getPlayer(playerID);
                     player.sendMessage(Localization.get(player, "game.mainstate.no_winner"));
                 });
                 gameLoop.cancel();
@@ -154,7 +137,10 @@ public class MainState extends GameState {
 
     }
 
-    private ItemStack getRenderedMapItem() {
+    public void setTime(int time) {
+        this.time = time;
+    }
+    public ItemStack getRenderedMapItem() {
         ItemStack itemStack = new ItemStack(Material.FILLED_MAP);
         MapView view = Bukkit.createMap(Bukkit.getWorlds().get(0));
         //clear renderers one by one
@@ -168,9 +154,5 @@ public class MainState extends GameState {
         mapMeta.setDisplayName(ChatColor.GOLD + "" + ChatColor.BOLD + "Bingo Board");
         itemStack.setItemMeta(mapMeta);
         return itemStack;
-    }
-
-    public void setTime(int time) {
-        this.time = time;
     }
 }

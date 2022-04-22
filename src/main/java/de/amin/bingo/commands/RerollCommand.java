@@ -8,6 +8,7 @@ import de.amin.bingo.gamestates.impl.MainState;
 import de.amin.bingo.gamestates.impl.PreState;
 import de.amin.bingo.utils.Config;
 import de.amin.bingo.utils.Localization;
+import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -37,10 +38,11 @@ public class RerollCommand implements CommandExecutor {
             player.sendMessage(Localization.get(player, "command.not_generated"));
             return false;
         }
-
-        plugin.getServer().getOnlinePlayers().forEach(p -> {
-            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK,1,1);
-            p.sendMessage(Localization.get(p, "command.reroll.message"));
+        this.game.getPlayers().forEach(playerID -> {
+            Player playerALL = Bukkit.getPlayer(playerID);
+            playerALL.playSound(playerALL.getLocation(), Sound.BLOCK_AMETHYST_CLUSTER_BREAK,1,1);
+            playerALL.sendMessage(Localization.get(playerALL, "command.reroll.message"));
+            playerALL.sendMessage("test2");
         });
 
         if(gameStateManager.getCurrentGameState() instanceof MainState) {

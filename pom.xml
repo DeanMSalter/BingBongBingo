@@ -51,6 +51,7 @@
                 <filtering>true</filtering>
             </resource>
         </resources>
+        <directory>C:\MC\plugins</directory>
     </build>
 
     <repositories>

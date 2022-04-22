@@ -5,6 +5,11 @@ authors: [ Duckulus ]
 description: Bingo
 api-version: 1.13
 commands:
+  singleplayer:
+    aliases:
+      - sp
+    permission: bingo.sp
+    description: Play a singleplayer bingo game
   forcestart:
     aliases:
       - fs

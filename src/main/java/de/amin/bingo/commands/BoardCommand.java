@@ -5,7 +5,6 @@ import de.amin.bingo.game.board.BingoBoard;
 import de.amin.bingo.game.BingoGame;
 import de.amin.bingo.game.board.BingoItem;
 import de.amin.bingo.gamestates.impl.PreState;
-import de.amin.bingo.team.TeamManager;
 import de.amin.bingo.utils.Localization;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -17,12 +16,10 @@ public class BoardCommand implements CommandExecutor {
 
     private final BingoGame game;
     private final GameStateManager gameStateManager;
-    private final TeamManager teamManager;
 
-    public BoardCommand(BingoGame game, GameStateManager gameStateManager, TeamManager teamManager) {
+    public BoardCommand(BingoGame game, GameStateManager gameStateManager) {
         this.game = game;
         this.gameStateManager = gameStateManager;
-        this.teamManager = teamManager;
     }
 
     @Override
@@ -34,7 +31,7 @@ public class BoardCommand implements CommandExecutor {
             player.sendMessage(Localization.get(player, "command.not_generated"));
         }
 
-        BingoBoard board = game.getBoard(teamManager.getTeam(player));
+        BingoBoard board = game.getBoard(player);
         if(board==null)return false;
 
         player.sendMessage(Localization.get(player, "command.board.message"));

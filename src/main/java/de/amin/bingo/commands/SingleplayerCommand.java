@@ -36,7 +36,7 @@ public class SingleplayerCommand implements CommandExecutor {
         Player player = (Player) sender;
         List<UUID> players = new ArrayList<UUID>();
         players.add(player.getUniqueId());
-        this.game = new BingoGame(plugin, players);
+        this.game = new BingoGame(players, plugin);
         this.renderer = new BoardRenderer(plugin, game);
         this.gameStateManager = new GameStateManager(plugin, game, renderer);
 

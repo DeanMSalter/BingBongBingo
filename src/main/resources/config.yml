@@ -4,6 +4,7 @@
 
 # The Current Config Version. DO NOT CHANGE OR THINGS WILL BREAK
 configVersion: 1.0
+gameCounter: 0
 
 # The time before the game starts | DEFAULT=60
 lobbyTime: 60

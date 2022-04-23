@@ -22,6 +22,7 @@ public class Config {
     public static boolean TEAM_LIMIT = config.getBoolean("teamlimit");
     public static boolean PVP = config.getBoolean("pvp");
     public static boolean WORLD_RESET = config.getBoolean("worldReset");
+    public static int GAME_COUNTER = config.getInt("gameCounter");
     public static int BOARD_SIZE = 16;
 
     public static boolean isDeprecated() {

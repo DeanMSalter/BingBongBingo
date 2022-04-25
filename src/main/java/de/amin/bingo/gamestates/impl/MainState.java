@@ -45,7 +45,9 @@ public class MainState extends GameState {
 
     @Override
     public void start() {
-        game.createBoards(this.game.getPlayers());
+        if (game.getBoards().size() == 0) {
+            game.createBoards(this.game.getPlayers());
+        }
         renderer.updateImages();
         ItemStack boardMap = getRenderedMapItem();
         game.setBoardItem(boardMap);
@@ -87,6 +89,7 @@ public class MainState extends GameState {
                                     Player playerAll = Bukkit.getPlayer(playerIDAll);
                                     playerAll.playSound(playerAll.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
                                 });
+                                this.game.saveGame();
                             }
                         }
                     }

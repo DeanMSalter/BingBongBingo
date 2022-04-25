@@ -1,32 +1,23 @@
 package de.amin.bingo.game;
 
-import com.google.gson.Gson;
 import de.amin.bingo.BingoPlugin;
 import de.amin.bingo.game.board.BingoBoard;
 import de.amin.bingo.game.board.BingoItem;
 import de.amin.bingo.game.board.BingoMaterial;
 import de.amin.bingo.game.board.map.BoardRenderer;
+import de.amin.bingo.gamestates.GameState;
+import de.amin.bingo.gamestates.GameStateManager;
+import de.amin.bingo.gamestates.impl.MainState;
 import de.amin.bingo.utils.Config;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapRenderer;
-import org.bukkit.map.MapView;
-import org.json.JSONObject;
 //import org.json.JSONObject;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -37,14 +28,29 @@ public class BingoGame {
     private final List<UUID> players;
     private int gameID;
     private ItemStack boardItem;
-
+    private BoardRenderer renderer;
+    private GameStateManager gameStateManager;
     BingoMaterial[] items = new BingoMaterial[Config.BOARD_SIZE];
 
-    public BingoGame(List<UUID> players, BingoPlugin plugin) {
+    public BingoGame(BingoPlugin plugin, List<UUID> players) {
         this.plugin = plugin;
         this.players = players;
-        this.gameID = Config.GAME_COUNTER + 1;
+        this.gameID = this.plugin.getGames().size() + 1;
         boards = new HashMap<>();
+    }
+    public BingoGame(BingoPlugin plugin, List<UUID> players, int gameID, HashMap<Object, BingoBoard> boards, BingoMaterial[] items) {
+        this.plugin = plugin;
+        this.players = players;
+        this.gameID = gameID;
+        this.boards = boards;
+        this.items = items;
+    }
+    public void startGame(){
+        this.renderer = new BoardRenderer(plugin, this);
+        this.gameStateManager = new GameStateManager(plugin, this, renderer);
+        gameStateManager.setGameState(GameState.MAIN_STATE);
+        ((MainState) gameStateManager.getCurrentGameState()).setTime(Config.GAME_DURATION);
+        renderer.updateImages();
     }
 
     public void createBoards() {
@@ -73,7 +79,6 @@ public class BingoGame {
     }
 
     public boolean checkWin(Player player) {
-        this.saveGame();
         int[][] winSituations = new int[][]{
                 //horizonzal
                 {0, 1, 2, 3},
@@ -106,7 +111,12 @@ public class BingoGame {
     public BingoMaterial getRandomMaterial() {
         return BingoMaterial.values()[new Random().nextInt(BingoMaterial.values().length)];
     }
-
+    public HashMap<Object, BingoBoard> getBoards(){
+        return this.boards;
+    }
+    public int getGameID(){
+        return this.gameID;
+    }
     public void setBoardItem(ItemStack boardItem) {
         this.boardItem = boardItem;
     }
@@ -154,6 +164,7 @@ public class BingoGame {
 
             }
             gamesConfig.save(gamesFile);
+            Bukkit.getLogger().info("done saving");
         } catch (IOException e) {
             e.printStackTrace();
         }

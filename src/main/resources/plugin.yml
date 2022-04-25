@@ -10,6 +10,9 @@ commands:
       - sp
     permission: bingo.sp
     description: Play a singleplayer bingo game
+  resume:
+    permission: bingo.resume
+    description: Resume a bingo game
   forcestart:
     aliases:
       - fs

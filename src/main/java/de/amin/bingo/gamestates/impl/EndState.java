@@ -30,8 +30,10 @@ public class EndState extends GameState {
     public void start() {
         for(UUID playerID : this.game.getPlayers()) {
             Player player = Bukkit.getPlayer(playerID);
-            player.sendMessage(Localization.get(player, "game.endingstate.server_restart"));
-            player.getInventory().removeItem(game.getBoardItem());
+            if (player != null) {
+                player.sendMessage(Localization.get(player, "game.endingstate.server_restart"));
+                player.getInventory().removeItem(game.getBoardItem());
+            }
         }
     }
 

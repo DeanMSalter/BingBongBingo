@@ -23,6 +23,8 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.RenderType;
 import org.bukkit.scoreboard.Scoreboard;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class MainState extends GameState {
@@ -34,6 +36,7 @@ public class MainState extends GameState {
     private final GameStateManager gameStateManager;
     private final BingoGame game;
     private final BoardRenderer renderer;
+    private final List<UUID> offlinePlayers;
 
 
     public MainState(BingoPlugin plugin, GameStateManager gameStateManager, BingoGame game, BoardRenderer renderer) {
@@ -41,6 +44,8 @@ public class MainState extends GameState {
         this.gameStateManager = gameStateManager;
         this.game = game;
         this.renderer = renderer;
+        this.offlinePlayers = new ArrayList<>();
+
     }
 
     @Override
@@ -74,32 +79,38 @@ public class MainState extends GameState {
         gameLoop = plugin.getServer().getScheduler().runTaskTimer(plugin, () -> {
             this.game.getPlayers().forEach(playerID -> {
                 Player player = Bukkit.getPlayer(playerID);
-                score.getScore(player.getName()).setScore(game.getBoard(player).getFoundItems());
+                if (player == null) {
+                    setPlayerStatus(playerID, false);
+                    handleOfflinePlayer(score);
+                } else {
+                    setPlayerStatus(playerID, true);
+                    score.getScore(player.getName()).setScore(game.getBoard(player).getFoundItems());
 
-                //check for all players if they have a new item from the board
-                for (BingoItem item : game.getBoard(player).getItems()) {
-                    if (!item.isFound()) {
-                        for (ItemStack content : player.getInventory().getContents()) {
-                            if (content != null && content.getType().equals(item.getMaterial())) {
-                                item.setFound(true);
-                                plugin.getServer().broadcastMessage(Localization.get(player, "game.mainstate.itemfound",
-                                        String.valueOf(game.getBoard(player).getFoundItems()),
-                                        String.valueOf(Config.BOARD_SIZE)));
-                                this.game.getPlayers().forEach(playerIDAll -> {
-                                    Player playerAll = Bukkit.getPlayer(playerIDAll);
-                                    playerAll.playSound(playerAll.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
-                                });
-                                this.game.saveGame();
+                    //check for all players if they have a new item from the board
+                    for (BingoItem item : game.getBoard(player).getItems()) {
+                        if (!item.isFound()) {
+                            for (ItemStack content : player.getInventory().getContents()) {
+                                if (content != null && content.getType().equals(item.getMaterial())) {
+                                    item.setFound(true);
+                                    plugin.getServer().broadcastMessage(Localization.get(player, "game.mainstate.itemfound",
+                                            String.valueOf(game.getBoard(player).getFoundItems()),
+                                            String.valueOf(Config.BOARD_SIZE)));
+                                    this.game.getPlayers().forEach(playerIDAll -> {
+                                        Player playerAll = Bukkit.getPlayer(playerIDAll);
+                                        playerAll.playSound(playerAll.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1, 1);
+                                    });
+                                    this.game.saveGame();
+                                }
                             }
                         }
                     }
-                }
-                if (game.checkWin(player)) {
-                    game.getPlayers().forEach(playerUUID -> {
-                        Bukkit.getPlayer(playerUUID).sendMessage(Localization.get(player, "game.mainstate.win"));
-                    });
-                    score.unregister();
-                    gameStateManager.setGameState(GameState.END_STATE);
+                    if (game.checkWin(player)) {
+                        game.getPlayers().forEach(playerUUID -> {
+                            Bukkit.getPlayer(playerUUID).sendMessage(Localization.get(player, "game.mainstate.win"));
+                        });
+                        score.unregister();
+                        gameStateManager.setGameState(GameState.END_STATE);
+                    }
                 }
             });
 
@@ -109,18 +120,24 @@ public class MainState extends GameState {
             if (time > 0) {
                 this.game.getPlayers().forEach(playerID -> {
                     Player player = Bukkit.getPlayer(playerID);
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new ComponentBuilder(ChatColor.GREEN + TimeUtils.formatTime(time)).create());
+                    if (player == null) {
+                        setPlayerStatus(playerID, false);
+                        handleOfflinePlayer(score);
+                    } else {
+                        setPlayerStatus(playerID, true);
+                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new ComponentBuilder(ChatColor.GREEN + TimeUtils.formatTime(time)).create());
 
-                    switch (time) {
-                        case 30:
-                        case 15:
-                        case 10:
-                        case 5:
-                        case 3:
-                        case 2:
-                        case 1: {
-                            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HARP, 1, 1);
-                            player.sendMessage(Localization.get(player, "game.mainstate.end", String.valueOf(time)));
+                        switch (time) {
+                            case 30:
+                            case 15:
+                            case 10:
+                            case 5:
+                            case 3:
+                            case 2:
+                            case 1: {
+                                player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HARP, 1, 1);
+                                player.sendMessage(Localization.get(player, "game.mainstate.end", String.valueOf(time)));
+                            }
                         }
                     }
                 });
@@ -139,7 +156,26 @@ public class MainState extends GameState {
         }, 0, 20);
 
     }
-
+    private void handleOfflinePlayer(Objective score){
+        if (offlinePlayers.size() == this.game.getPlayers().size()) {
+            gameLoop.cancel();
+            score.unregister();
+            gameStateManager.setGameState(GameState.END_STATE);
+        }
+        this.game.getPlayers().forEach(playerIDOnline -> {
+            Player playerOnline = Bukkit.getPlayer(playerIDOnline);
+            if (playerOnline != null) {
+                playerOnline.sendMessage("A player has left the game, you can pause the game or carry on.");
+            }
+        });
+    }
+    private void setPlayerStatus(UUID playerID, Boolean online) {
+        if (this.offlinePlayers.contains(playerID) && online) {
+            this.offlinePlayers.remove(playerID);
+        } else if(!this.offlinePlayers.contains(playerID) && !online){
+            this.offlinePlayers.add(playerID);
+        }
+    }
     public void setTime(int time) {
         this.time = time;
     }

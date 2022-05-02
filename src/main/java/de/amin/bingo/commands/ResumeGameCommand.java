@@ -22,8 +22,16 @@ public class ResumeGameCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if(!(sender instanceof Player))return false;
         Player player = (Player) sender;
+        if (args.length == 0) {
+            player.sendMessage("Please provide the ID of the game you want to resume.");
+            return false;
+        }
         BingoGame game = plugin.getGame(Integer.parseInt(args[0]));
-        game.startGame();
+        if (game == null) {
+            player.sendMessage("Could not find the game specified, please check you are using the right ID");
+            return false;
+        }
+        game.startGame(player);
         return false;
     }
 }

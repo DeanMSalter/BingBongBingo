@@ -53,8 +53,11 @@ public final class BingoPlugin extends JavaPlugin {
 
         saveDefaultConfig();
         registerCommands();
-        loadGame(1);
-
+        File gamesFile = new File(INSTANCE.getDataFolder(), "games.yml");
+        FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
+        for(String key : gamesConfig.getKeys(false)) {
+            loadGame(Integer.parseInt(key));
+        }
     }
 
     private void registerCommands() {

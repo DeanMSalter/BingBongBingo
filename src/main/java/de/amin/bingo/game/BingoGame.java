@@ -9,6 +9,7 @@ import de.amin.bingo.gamestates.GameState;
 import de.amin.bingo.gamestates.GameStateManager;
 import de.amin.bingo.gamestates.impl.MainState;
 import de.amin.bingo.utils.Config;
+import jdk.tools.jmod.Main;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -46,11 +47,42 @@ public class BingoGame {
         this.items = items;
     }
     public void startGame(){
+        for(Map.Entry<Integer, BingoGame> entry : this.plugin.getGames().entrySet()) {
+            Integer gameID = entry.getKey();
+            BingoGame game = entry.getValue();
+            List<UUID> players = game.getPlayers();
+            GameStateManager gameStateManager = game.getGameStateManager();
+
+            boolean playerAlreadyPlaying = false;
+            if (gameStateManager != null && gameStateManager.getCurrentGameState() instanceof MainState) {
+                for (UUID playerID : this.players) {
+                    if (players.contains(playerID)) {
+                        playerAlreadyPlaying = true;
+                        break;
+                    }
+                }
+            }
+            if (playerAlreadyPlaying) {
+                for (UUID playerID : this.players) {
+                    Player player = Bukkit.getPlayer(playerID);
+                    player.sendMessage("Can not start game as a player is already in a game.");
+                }
+                return;
+            }
+        }
+
         this.renderer = new BoardRenderer(plugin, this);
         this.gameStateManager = new GameStateManager(plugin, this, renderer);
         gameStateManager.setGameState(GameState.MAIN_STATE);
         ((MainState) gameStateManager.getCurrentGameState()).setTime(Config.GAME_DURATION);
         renderer.updateImages();
+    }
+    public void startGame(Player player){
+        if (!this.players.contains(player.getUniqueId())) {
+            player.sendMessage("You are not allowed to start this game.");
+            return;
+        }
+        startGame();
     }
 
     public void createBoards() {
@@ -133,6 +165,9 @@ public class BingoGame {
         return items;
     }
 
+    public GameStateManager getGameStateManager(){
+        return this.gameStateManager;
+    }
     public List<UUID> getPlayers() {
         return this.players;
     }

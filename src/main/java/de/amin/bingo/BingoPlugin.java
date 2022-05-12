@@ -15,10 +15,12 @@ import org.apache.commons.io.FileUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameRule;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -65,21 +67,29 @@ public final class BingoPlugin extends JavaPlugin {
 //        getCommand("reroll").setExecutor(new RerollCommand(this, game));
         getCommand("singleplayer").setExecutor(new SingleplayerCommand(this));
         getCommand("resume").setExecutor(new ResumeGameCommand(this));
+        getCommand("pause").setExecutor(new PauseCommand(this));
 
 
     }
 
     public void loadGame(int gameID){
-        HashMap<Object, BingoBoard> boards = new HashMap<Object, BingoBoard>();
+        HashMap<Object, BingoBoard> boards = new HashMap<>();
         List<UUID> players = new ArrayList<UUID>();
-
+        HashMap<UUID, Location> positions = new HashMap<>();
         File gamesFile = new File(INSTANCE.getDataFolder(), "games.yml");
         FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
         ConfigurationSection gameSection = gamesConfig.getConfigurationSection(String.valueOf(gameID));
+        int timeLeft = gameSection.getInt("timeLeft");
+
+        ConfigurationSection positionsSection = gameSection.getConfigurationSection("positions");
+        for(String key : positionsSection.getKeys(false)) {
+            ConfigurationSection position = positionsSection.getConfigurationSection(key);
+            Location location = new Location(Bukkit.getWorld(position.getString("WORLD")), position.getDouble("X"),position.getDouble("Y"), position.getDouble("Z"), (float) position.getDouble("YAW"), (float) position.getDouble("PITCH"));
+            positions.put(UUID.fromString(key), location);
+        }
         List loadedPlayers = gameSection.getList("players");
         for (Object loadedPlayer: loadedPlayers) {
             players.add(UUID.fromString((String) loadedPlayer));
-
         }
         ConfigurationSection boardSection = gameSection.getConfigurationSection("boards");
         BingoBoard bingoBoard;
@@ -104,9 +114,23 @@ public final class BingoPlugin extends JavaPlugin {
             }
             boards.put(UUID.fromString(key), bingoBoard);
         }
-        games.put(gameID, new BingoGame(INSTANCE, players, gameID, boards, loadedGameItems));
+        games.put(gameID, new BingoGame(INSTANCE, players, gameID, boards, loadedGameItems, timeLeft, positions));
     }
+    public BingoGame getGamePlayerIsIn(Player player){
+        for(Map.Entry<Integer, BingoGame> entry : INSTANCE.getGames().entrySet()) {
+            Integer gameID = entry.getKey();
+            BingoGame game = entry.getValue();
+            List<UUID> players = game.getPlayers();
+            GameStateManager gameStateManager = game.getGameStateManager();
 
+            if (gameStateManager != null && gameStateManager.getCurrentGameState() instanceof MainState) {
+                if (players.contains(player.getUniqueId())) {
+                    return game;
+                }
+            }
+        }
+        return null;
+    }
     public HashMap<Integer, BingoGame> getGames(){
         return games;
     }

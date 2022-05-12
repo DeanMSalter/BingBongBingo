@@ -13,6 +13,9 @@ commands:
   resume:
     permission: bingo.resume
     description: Resume a bingo game
+  pause:
+    permission: bingo.pause
+    description: pause a bingo game
   forcestart:
     aliases:
       - fs

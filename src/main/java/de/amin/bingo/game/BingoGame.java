@@ -11,6 +11,11 @@ import de.amin.bingo.gamestates.impl.MainState;
 import de.amin.bingo.utils.Config;
 import jdk.tools.jmod.Main;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.WorldBorder;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -21,6 +26,7 @@ import org.bukkit.inventory.ItemStack;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class BingoGame {
@@ -32,28 +38,102 @@ public class BingoGame {
     private BoardRenderer renderer;
     private GameStateManager gameStateManager;
     BingoMaterial[] items = new BingoMaterial[Config.BOARD_SIZE];
+    private int timeLeft = Config.GAME_DURATION;
+    private HashMap<UUID, Location> positions;
 
     public BingoGame(BingoPlugin plugin, List<UUID> players) {
         this.plugin = plugin;
         this.players = players;
         this.gameID = this.plugin.getGames().size() + 1;
         boards = new HashMap<>();
+        positions = new HashMap<>();
+        this.players.forEach(uuid -> {
+            Player player = Bukkit.getPlayer(uuid);
+            World world = player.getLocation().getWorld();
+            Location locationToUse = null;
+            for(int i = 0; i < 10; i++) {
+                Location newLocation = findLocation(world);
+                player.sendMessage("finding location....");
+                if (isSafeLocation(newLocation)){
+                    player.sendMessage("found safe location!");
+                    locationToUse = newLocation;
+                    break;
+                } else {
+                    player.sendMessage("location not safe :(");
+                }
+            }
+            if (locationToUse == null) {
+                player.sendMessage("Could not find a safe location so using current position, please contact staff or try again.");
+                this.positions.put(uuid,player.getLocation());
+            } else{
+                this.positions.put(uuid,locationToUse);
+            }
+        });
     }
-    public BingoGame(BingoPlugin plugin, List<UUID> players, int gameID, HashMap<Object, BingoBoard> boards, BingoMaterial[] items) {
+    public Location findLocation(World world){
+        WorldBorder worldBorder = world.getWorldBorder();
+        double X = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getX(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
+        double Z = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getZ(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
+        double Y = world.getHighestBlockYAt((int) X, (int) Z);
+        return new Location(world,X,Y, Z);
+    }
+    public static boolean isSafeLocation(Location location) {
+        Block feet = location.getBlock();
+        if (!feet.isPassable() && !feet.getLocation().add(0, 1, 0).getBlock().isPassable()) {
+            return false; // not transparent (will suffocate)
+        }
+        Block head = feet.getRelative(BlockFace.UP);
+        if (!head.isPassable()) {
+            return false; // not transparent (will suffocate)
+        }
+        Block ground = feet.getRelative(BlockFace.DOWN);
+        if (!ground.getType().isSolid()) {
+            return false; // not solid
+        }
+        return true;
+    }
+    public BingoGame(BingoPlugin plugin, List<UUID> players, int gameID, HashMap<Object, BingoBoard> boards, BingoMaterial[] items, int timeLeft, HashMap<UUID, Location> positions) {
         this.plugin = plugin;
         this.players = players;
         this.gameID = gameID;
         this.boards = boards;
         this.items = items;
+        this.timeLeft = timeLeft;
+        this.positions = positions;
     }
     public void startGame(){
+        this.renderer = new BoardRenderer(plugin, this);
+        this.gameStateManager = new GameStateManager(plugin, this, renderer);
+        gameStateManager.setGameState(GameState.MAIN_STATE);
+        this.players.forEach(uuid -> {
+            Player player = Bukkit.getPlayer(uuid);
+            player.teleport(positions.get(uuid));
+        });
+        ((MainState) gameStateManager.getCurrentGameState()).setTime(this.timeLeft);
+        renderer.updateImages();
+    }
+    public void endGame(){
+        this.gameStateManager.setGameState(GameState.END_STATE);
+    }
+    public void startGame(Player player){
+        if (!this.players.contains(player.getUniqueId())) {
+            player.sendMessage("You are not allowed to start this game.");
+            return;
+        }
+        if (playerAlreadyPlaying()) {
+            player.sendMessage("Can not start game as a player is already in a game.");
+            return;
+        }
+        startGame();
+    }
+    public boolean playerAlreadyPlaying(){
+        boolean playerAlreadyPlaying = false;
         for(Map.Entry<Integer, BingoGame> entry : this.plugin.getGames().entrySet()) {
             Integer gameID = entry.getKey();
             BingoGame game = entry.getValue();
             List<UUID> players = game.getPlayers();
             GameStateManager gameStateManager = game.getGameStateManager();
 
-            boolean playerAlreadyPlaying = false;
             if (gameStateManager != null && gameStateManager.getCurrentGameState() instanceof MainState) {
                 for (UUID playerID : this.players) {
                     if (players.contains(playerID)) {
@@ -62,29 +142,9 @@ public class BingoGame {
                     }
                 }
             }
-            if (playerAlreadyPlaying) {
-                for (UUID playerID : this.players) {
-                    Player player = Bukkit.getPlayer(playerID);
-                    player.sendMessage("Can not start game as a player is already in a game.");
-                }
-                return;
-            }
         }
-
-        this.renderer = new BoardRenderer(plugin, this);
-        this.gameStateManager = new GameStateManager(plugin, this, renderer);
-        gameStateManager.setGameState(GameState.MAIN_STATE);
-        ((MainState) gameStateManager.getCurrentGameState()).setTime(Config.GAME_DURATION);
-        renderer.updateImages();
+        return playerAlreadyPlaying;
     }
-    public void startGame(Player player){
-        if (!this.players.contains(player.getUniqueId())) {
-            player.sendMessage("You are not allowed to start this game.");
-            return;
-        }
-        startGame();
-    }
-
     public void createBoards() {
         //generation of random items
         for (int i = 0; i < items.length; i++) {
@@ -177,7 +237,22 @@ public class BingoGame {
             File gamesFile = new File(this.plugin.getDataFolder(), "games.yml");
             FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
             ConfigurationSection newGameSection = gamesConfig.createSection(String.valueOf(this.gameID));
+            newGameSection.set("timeLeft", ((MainState) this.gameStateManager.getCurrentGameState()).getTimeLeft());
             newGameSection.set("players", this.players.stream().map(UUID::toString).collect(Collectors.toList()));
+            ConfigurationSection positionsSection = newGameSection.createSection("positions");
+            this.players.forEach(uuid -> {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+                    ConfigurationSection positionSection = positionsSection.createSection(String.valueOf(uuid));
+                    Location location = player.getLocation();
+                    positionSection.set("X", location.getX());
+                    positionSection.set("Y", location.getY());
+                    positionSection.set("Z", location.getZ());
+                    positionSection.set("YAW", location.getYaw());
+                    positionSection.set("PITCH", location.getPitch());
+                    positionSection.set("WORLD", location.getWorld().getName());
+                }
+            });
             ConfigurationSection boardsSection = newGameSection.createSection("boards");
 
             for (Map.Entry<Object, BingoBoard> board : this.boards.entrySet()) {

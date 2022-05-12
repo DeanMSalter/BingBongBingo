@@ -2,6 +2,10 @@ package de.amin.bingo.commands;
 
 import de.amin.bingo.BingoPlugin;
 import de.amin.bingo.game.BingoGame;
+import de.amin.bingo.game.board.map.BoardRenderer;
+import de.amin.bingo.gamestates.GameState;
+import de.amin.bingo.gamestates.GameStateManager;
+import de.amin.bingo.gamestates.impl.MainState;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -11,10 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public class ResumeGameCommand implements CommandExecutor {
+public class PauseCommand implements CommandExecutor {
 
     private BingoPlugin plugin;
-    public ResumeGameCommand(BingoPlugin plugin) {
+    public PauseCommand(BingoPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -22,17 +26,13 @@ public class ResumeGameCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if(!(sender instanceof Player))return false;
         Player player = (Player) sender;
-        if (args.length == 0) {
-            player.sendMessage("Please provide the ID of the game you want to resume.");
+        BingoGame game = this.plugin.getGamePlayerIsIn(player);
+        if (game == null){
+            player.sendMessage("You are not in a game");
             return false;
         }
-        this.plugin.loadGame(Integer.parseInt(args[0]));
-        BingoGame game = plugin.getGame(Integer.parseInt(args[0]));
-        if (game == null) {
-            player.sendMessage("Could not find the game specified, please check you are using the right ID");
-            return false;
-        }
-        game.startGame(player);
+        game.saveGame();
+        game.endGame();
         return false;
     }
 }

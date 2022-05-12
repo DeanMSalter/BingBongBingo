@@ -47,7 +47,9 @@ public class MainState extends GameState {
         this.offlinePlayers = new ArrayList<>();
 
     }
-
+    public int getTimeLeft(){
+        return this.time;
+    }
     @Override
     public void start() {
         if (game.getBoards().size() == 0) {

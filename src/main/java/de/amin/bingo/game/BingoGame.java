@@ -48,28 +48,6 @@ public class BingoGame {
         boards = new HashMap<>();
         positions = new HashMap<>();
     }
-    public Location findLocation(World world){
-        WorldBorder worldBorder = world.getWorldBorder();
-        double X = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getX(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
-        double Z = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getZ(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
-        double Y = world.getHighestBlockYAt((int) X, (int) Z);
-        return new Location(world,X,Y, Z);
-    }
-    public static boolean isSafeLocation(Location location) {
-        Block feet = location.getBlock();
-        if (!feet.isPassable() && !feet.getLocation().add(0, 1, 0).getBlock().isPassable()) {
-            return false; // not transparent (will suffocate)
-        }
-        Block head = feet.getRelative(BlockFace.UP);
-        if (!head.isPassable()) {
-            return false; // not transparent (will suffocate)
-        }
-        Block ground = feet.getRelative(BlockFace.DOWN);
-        if (!ground.getType().isSolid()) {
-            return false; // not solid
-        }
-        return true;
-    }
     public BingoGame(BingoPlugin plugin, List<UUID> players, int gameID, HashMap<Object, BingoBoard> boards, BingoMaterial[] items, int timeLeft, HashMap<UUID, Location> positions) {
         this.plugin = plugin;
         this.players = players;
@@ -115,6 +93,28 @@ public class BingoGame {
         ((MainState) gameStateManager.getCurrentGameState()).setTime(this.timeLeft);
         renderer.updateImages();
     }
+    public Location findLocation(World world){
+        WorldBorder worldBorder = world.getWorldBorder();
+        double X = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getX(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
+        double Z = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getZ(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
+        double Y = world.getHighestBlockYAt((int) X, (int) Z);
+        return new Location(world,X,Y, Z);
+    }
+    public static boolean isSafeLocation(Location location) {
+        Block feet = location.getBlock();
+        if (!feet.isPassable() && !feet.getLocation().add(0, 1, 0).getBlock().isPassable()) {
+            return false; // not transparent (will suffocate)
+        }
+        Block head = feet.getRelative(BlockFace.UP);
+        if (!head.isPassable()) {
+            return false; // not transparent (will suffocate)
+        }
+        Block ground = feet.getRelative(BlockFace.DOWN);
+        if (!ground.getType().isSolid()) {
+            return false; // not solid
+        }
+        return true;
+    }
     public void endGame(){
         this.gameStateManager.setGameState(GameState.END_STATE);
     }
@@ -126,6 +126,13 @@ public class BingoGame {
         if (playerAlreadyPlaying()) {
             player.sendMessage("Can not start game as a player is already in a game.");
             return;
+        }
+        for (UUID playerInGameUUID: this.players) {
+            Player playerInGame = Bukkit.getPlayer(playerInGameUUID);
+            if (playerInGame == null || !playerInGame.isOnline()) {
+                player.sendMessage("Can not start game as a player is offline.");
+                return;
+            }
         }
         startGame();
     }

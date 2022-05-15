@@ -27,6 +27,7 @@ public class createGameCommand implements CommandExecutor {
         BingoGame game = new BingoGame(plugin, players);
         plugin.addGame(game.getGameID(), game);
         game.saveGame();
+        player.sendMessage("game created with ID" + game.getGameID());
         return false;
     }
 }

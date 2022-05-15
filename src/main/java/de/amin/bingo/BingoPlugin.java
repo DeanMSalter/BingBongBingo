@@ -42,6 +42,7 @@ public final class BingoPlugin extends JavaPlugin {
 
     public static BingoPlugin INSTANCE;
     public static HashMap<Integer, BingoGame> games = new HashMap<Integer, BingoGame>();
+    private int highestID = 0;
     @Override
     public void onLoad() {
         INSTANCE = this;
@@ -61,7 +62,6 @@ public final class BingoPlugin extends JavaPlugin {
             loadGame(Integer.parseInt(key));
         }
     }
-
     private void registerCommands() {
 //        getCommand("board").setExecutor(new BoardCommand(game));
 //        getCommand("reroll").setExecutor(new RerollCommand(this, game));
@@ -74,7 +74,14 @@ public final class BingoPlugin extends JavaPlugin {
 
     }
 
+    public int getHighestID() {
+        return highestID;
+    }
+
     public void loadGame(int gameID){
+        if (gameID > highestID) {
+            highestID = gameID;
+        }
         HashMap<Object, BingoBoard> boards = new HashMap<>();
         List<UUID> players = new ArrayList<UUID>();
         HashMap<UUID, Location> positions = new HashMap<>();
@@ -82,6 +89,7 @@ public final class BingoPlugin extends JavaPlugin {
         FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
         ConfigurationSection gameSection = gamesConfig.getConfigurationSection(String.valueOf(gameID));
         int timeLeft = gameSection.getInt("timeLeft");
+        boolean active = gameSection.getBoolean("active");
 
         ConfigurationSection positionsSection = gameSection.getConfigurationSection("positions");
         for(String key : positionsSection.getKeys(false)) {
@@ -116,15 +124,18 @@ public final class BingoPlugin extends JavaPlugin {
             }
             boards.put(UUID.fromString(key), bingoBoard);
         }
-        games.put(gameID, new BingoGame(INSTANCE, players, gameID, boards, loadedGameItems, timeLeft, positions));
+        games.put(gameID, new BingoGame(INSTANCE, players, gameID, boards, loadedGameItems, timeLeft, positions, active));
     }
     public BingoGame getGamePlayerIsIn(Player player){
         for(Map.Entry<Integer, BingoGame> entry : INSTANCE.getGames().entrySet()) {
             BingoGame game = entry.getValue();
-            List<UUID> players = game.getPlayers();
-            if (players.contains(player.getUniqueId())) {
-                return game;
+            if (game.getActive()) {
+                List<UUID> players = game.getPlayers();
+                if (players.contains(player.getUniqueId())) {
+                    return game;
+                }
             }
+
         }
         return null;
     }

@@ -53,7 +53,7 @@ public enum BingoMaterial {
     CHEST_MINECART("chest minecart", Material.CHEST_MINECART),
     CHICKEN("chicken", Material.CHICKEN),
     CLAY_BALL("clay ball", Material.CLAY_BALL),
-    CLOCK_00("clock", Material.CLOCK),
+    CLOCK("clock", Material.CLOCK),
     COAL("coal", Material.COAL),
     COCOA_BEANS("cocoa beans", Material.COCOA_BEANS),
     COD("cod", Material.COD),

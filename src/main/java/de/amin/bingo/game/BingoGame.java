@@ -7,6 +7,7 @@ import de.amin.bingo.game.board.BingoMaterial;
 import de.amin.bingo.game.board.map.BoardRenderer;
 import de.amin.bingo.gamestates.GameState;
 import de.amin.bingo.gamestates.GameStateManager;
+import de.amin.bingo.gamestates.impl.EndState;
 import de.amin.bingo.gamestates.impl.MainState;
 import de.amin.bingo.utils.Config;
 import jdk.tools.jmod.Main;
@@ -40,15 +41,16 @@ public class BingoGame {
     BingoMaterial[] items = new BingoMaterial[Config.BOARD_SIZE];
     private int timeLeft = Config.GAME_DURATION;
     private HashMap<UUID, Location> positions;
+    private boolean active = true;
 
     public BingoGame(BingoPlugin plugin, List<UUID> players) {
         this.plugin = plugin;
         this.players = players;
-        this.gameID = this.plugin.getGames().size() + 1;
+        this.gameID = this.plugin.getHighestID() + 1;
         boards = new HashMap<>();
         positions = new HashMap<>();
     }
-    public BingoGame(BingoPlugin plugin, List<UUID> players, int gameID, HashMap<Object, BingoBoard> boards, BingoMaterial[] items, int timeLeft, HashMap<UUID, Location> positions) {
+    public BingoGame(BingoPlugin plugin, List<UUID> players, int gameID, HashMap<Object, BingoBoard> boards, BingoMaterial[] items, int timeLeft, HashMap<UUID, Location> positions, boolean active) {
         this.plugin = plugin;
         this.players = players;
         this.gameID = gameID;
@@ -56,6 +58,7 @@ public class BingoGame {
         this.items = items;
         this.timeLeft = timeLeft;
         this.positions = positions;
+        this.active = active;
     }
     public void startGame(){
         this.renderer = new BoardRenderer(plugin, this);
@@ -121,6 +124,10 @@ public class BingoGame {
     public void startGame(Player player){
         if (!this.players.contains(player.getUniqueId())) {
             player.sendMessage("You are not allowed to start this game.");
+            return;
+        }
+        if (!this.active){
+            player.sendMessage("You are not allowed to start this game as it is not active.");
             return;
         }
         if (playerAlreadyPlaying()) {
@@ -210,6 +217,12 @@ public class BingoGame {
         return false;
     }
 
+    public boolean getActive(){
+        return this.active;
+    }
+    public void setActive(Boolean active){
+        this.active = active;
+    }
     public BingoMaterial getRandomMaterial() {
         return BingoMaterial.values()[new Random().nextInt(BingoMaterial.values().length)];
     }
@@ -249,9 +262,13 @@ public class BingoGame {
             File gamesFile = new File(this.plugin.getDataFolder(), "games.yml");
             FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
             ConfigurationSection newGameSection = gamesConfig.createSection(String.valueOf(this.gameID));
-            if (this.gameStateManager == null) {
+            newGameSection.set("active", this.active);
+
+            if (this.gameStateManager == null || this.gameStateManager.getCurrentGameState() == null) {
                 newGameSection.set("timeLeft", Config.GAME_DURATION);
-            } else {
+            } else if (this.gameStateManager.getCurrentGameState() instanceof EndState) {
+                newGameSection.set("timeLeft", 0);
+            } else{
                 newGameSection.set("timeLeft", ((MainState) this.gameStateManager.getCurrentGameState()).getTimeLeft());
             }
             newGameSection.set("players", this.players.stream().map(UUID::toString).collect(Collectors.toList()));
@@ -291,6 +308,7 @@ public class BingoGame {
             }
             gamesConfig.save(gamesFile);
             Bukkit.getLogger().info("done saving");
+            plugin.loadGame(this.gameID);
         } catch (IOException e) {
             e.printStackTrace();
         }

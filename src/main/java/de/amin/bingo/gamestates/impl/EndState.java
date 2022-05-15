@@ -28,10 +28,12 @@ public class EndState extends GameState {
 
     @Override
     public void start() {
+        game.setActive(false);
+        game.saveGame();
         for(UUID playerID : this.game.getPlayers()) {
             Player player = Bukkit.getPlayer(playerID);
             if (player != null) {
-                player.sendMessage(Localization.get(player, "game.endingstate.server_restart"));
+                player.sendMessage("Game is ending.");
                 player.getInventory().removeItem(game.getBoardItem());
             }
         }

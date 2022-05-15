@@ -37,7 +37,12 @@ public class inviteCommand implements CommandExecutor {
             player.sendMessage("You are not in a game");
             return false;
         }
-        playerToInvite.sendMessage("you have been added to a game");
+        BingoGame gameOfOtherPlayer = this.plugin.getGamePlayerIsIn(playerToInvite);
+        if (gameOfOtherPlayer != null) {
+            player.sendMessage("Player is in another game.");
+            return false;
+        }
+        playerToInvite.sendMessage("you have been added to a game " + game.getGameID());
         game.addPlayer(playerToInvite);
         game.saveGame();
         return false;

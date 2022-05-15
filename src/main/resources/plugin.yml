@@ -13,6 +13,12 @@ commands:
   resume:
     permission: bingo.resume
     description: Resume a bingo game
+  createGame:
+    permission: bingo.createGame
+    description: Creats a bingo game
+  invite:
+    permission: bingo.invite
+    description: Invite someone to game
   pause:
     permission: bingo.pause
     description: pause a bingo game

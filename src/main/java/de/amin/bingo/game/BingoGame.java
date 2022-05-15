@@ -47,28 +47,6 @@ public class BingoGame {
         this.gameID = this.plugin.getGames().size() + 1;
         boards = new HashMap<>();
         positions = new HashMap<>();
-        this.players.forEach(uuid -> {
-            Player player = Bukkit.getPlayer(uuid);
-            World world = player.getLocation().getWorld();
-            Location locationToUse = null;
-            for(int i = 0; i < 10; i++) {
-                Location newLocation = findLocation(world);
-                player.sendMessage("finding location....");
-                if (isSafeLocation(newLocation)){
-                    player.sendMessage("found safe location!");
-                    locationToUse = newLocation;
-                    break;
-                } else {
-                    player.sendMessage("location not safe :(");
-                }
-            }
-            if (locationToUse == null) {
-                player.sendMessage("Could not find a safe location so using current position, please contact staff or try again.");
-                this.positions.put(uuid,player.getLocation());
-            } else{
-                this.positions.put(uuid,locationToUse);
-            }
-        });
     }
     public Location findLocation(World world){
         WorldBorder worldBorder = world.getWorldBorder();
@@ -105,6 +83,31 @@ public class BingoGame {
         this.renderer = new BoardRenderer(plugin, this);
         this.gameStateManager = new GameStateManager(plugin, this, renderer);
         gameStateManager.setGameState(GameState.MAIN_STATE);
+        if (this.timeLeft == Config.GAME_DURATION) {
+            Player player = Bukkit.getPlayer(this.players.get(0));
+            World world = player.getLocation().getWorld();
+            Location locationToUse = null;
+            for(int i = 0; i < 20; i++) {
+                Location newLocation = findLocation(world);
+                player.sendMessage("finding location....");
+                if (isSafeLocation(newLocation)){
+                    player.sendMessage("found safe location!");
+                    locationToUse = newLocation;
+                    break;
+                } else {
+                    player.sendMessage("location not safe :(");
+                }
+            }
+            for (UUID uuid : this.players){
+                if (locationToUse == null) {
+                    player.sendMessage("Could not find a safe location so using current position, please contact staff or try again.");
+                    this.positions.put(uuid,player.getLocation());
+                } else{
+                    this.positions.put(uuid,locationToUse);
+                }
+            }
+
+        }
         this.players.forEach(uuid -> {
             Player player = Bukkit.getPlayer(uuid);
             player.teleport(positions.get(uuid));
@@ -231,13 +234,19 @@ public class BingoGame {
     public List<UUID> getPlayers() {
         return this.players;
     }
-
+    public void addPlayer(Player player) {
+        this.players.add(player.getUniqueId());
+    }
     public void saveGame() {
         try {
             File gamesFile = new File(this.plugin.getDataFolder(), "games.yml");
             FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
             ConfigurationSection newGameSection = gamesConfig.createSection(String.valueOf(this.gameID));
-            newGameSection.set("timeLeft", ((MainState) this.gameStateManager.getCurrentGameState()).getTimeLeft());
+            if (this.gameStateManager == null) {
+                newGameSection.set("timeLeft", Config.GAME_DURATION);
+            } else {
+                newGameSection.set("timeLeft", ((MainState) this.gameStateManager.getCurrentGameState()).getTimeLeft());
+            }
             newGameSection.set("players", this.players.stream().map(UUID::toString).collect(Collectors.toList()));
             ConfigurationSection positionsSection = newGameSection.createSection("positions");
             this.players.forEach(uuid -> {

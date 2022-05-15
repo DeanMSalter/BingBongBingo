@@ -68,6 +68,8 @@ public final class BingoPlugin extends JavaPlugin {
         getCommand("singleplayer").setExecutor(new SingleplayerCommand(this));
         getCommand("resume").setExecutor(new ResumeGameCommand(this));
         getCommand("pause").setExecutor(new PauseCommand(this));
+        getCommand("createGame").setExecutor(new createGameCommand(this));
+        getCommand("invite").setExecutor(new inviteCommand(this));
 
 
     }
@@ -118,15 +120,10 @@ public final class BingoPlugin extends JavaPlugin {
     }
     public BingoGame getGamePlayerIsIn(Player player){
         for(Map.Entry<Integer, BingoGame> entry : INSTANCE.getGames().entrySet()) {
-            Integer gameID = entry.getKey();
             BingoGame game = entry.getValue();
             List<UUID> players = game.getPlayers();
-            GameStateManager gameStateManager = game.getGameStateManager();
-
-            if (gameStateManager != null && gameStateManager.getCurrentGameState() instanceof MainState) {
-                if (players.contains(player.getUniqueId())) {
-                    return game;
-                }
+            if (players.contains(player.getUniqueId())) {
+                return game;
             }
         }
         return null;

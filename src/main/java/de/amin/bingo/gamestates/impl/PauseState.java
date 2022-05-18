@@ -5,21 +5,18 @@ import de.amin.bingo.game.BingoGame;
 import de.amin.bingo.game.board.map.BoardRenderer;
 import de.amin.bingo.gamestates.GameState;
 import de.amin.bingo.gamestates.GameStateManager;
-import de.amin.bingo.utils.Localization;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
 
-public class EndState extends GameState {
+public class PauseState extends GameState {
 
     private BingoPlugin plugin;
     private final GameStateManager gameStateManager;
     private final BingoGame game;
     private final BoardRenderer renderer;
-    public EndState(BingoPlugin plugin, GameStateManager gameStateManager, BingoGame game, BoardRenderer renderer) {
+    public PauseState(BingoPlugin plugin, GameStateManager gameStateManager, BingoGame game, BoardRenderer renderer) {
         this.plugin = plugin;
         this.gameStateManager = gameStateManager;
         this.game = game;
@@ -28,13 +25,12 @@ public class EndState extends GameState {
 
     @Override
     public void start() {
-        game.setActive(false);
-        game.saveGame();
+
         for(UUID playerID : this.game.getPlayers()) {
             Player player = Bukkit.getPlayer(playerID);
             player.teleport(this.game.getPreviousPositions().get(playerID));
             if (player != null) {
-                player.sendMessage("Game is ending.");
+                player.sendMessage("Game is pausing.");
                 player.getInventory().removeItem(game.getBoardItem());
             }
         }

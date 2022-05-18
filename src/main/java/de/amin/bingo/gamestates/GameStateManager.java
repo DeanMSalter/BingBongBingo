@@ -5,6 +5,7 @@ import de.amin.bingo.game.BingoGame;
 import de.amin.bingo.game.board.map.BoardRenderer;
 import de.amin.bingo.gamestates.impl.EndState;
 import de.amin.bingo.gamestates.impl.MainState;
+import de.amin.bingo.gamestates.impl.PauseState;
 import de.amin.bingo.gamestates.impl.PreState;
 
 public class GameStateManager {
@@ -18,10 +19,11 @@ public class GameStateManager {
         this.renderer = renderer;
 
         //initialization of all GameStates insinde an Array
-        gameStates = new GameState[3];
+        gameStates = new GameState[4];
         gameStates[GameState.PRE_STATE] = new PreState(plugin, this, game, renderer);
         gameStates[GameState.MAIN_STATE] = new MainState(plugin, this, game, renderer);
         gameStates[GameState.END_STATE] = new EndState(plugin, this, game, renderer);
+        gameStates[GameState.PAUSE_STATE] = new PauseState(plugin, this, game, renderer);
     }
 
     /**

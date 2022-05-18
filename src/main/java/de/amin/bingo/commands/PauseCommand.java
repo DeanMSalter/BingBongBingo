@@ -27,12 +27,13 @@ public class PauseCommand implements CommandExecutor {
         if(!(sender instanceof Player))return false;
         Player player = (Player) sender;
         BingoGame game = this.plugin.getGamePlayerIsIn(player);
+
         if (game == null){
             player.sendMessage("You are not in a game");
             return false;
         }
         game.saveGame();
-        game.endGame();
+        game.pauseGame();
         return false;
     }
 }

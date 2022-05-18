@@ -59,7 +59,7 @@ public enum BingoMaterial {
     COD("cod", Material.COD),
     COD_BUCKET("cod bucket", Material.COD_BUCKET),
     COMPARATOR("comparator", Material.COMPARATOR),
-    COMPASS_00("compass", Material.COMPASS),
+    COMPASS("compass", Material.COMPASS),
     COOKED_BEEF("cooked beef", Material.COOKED_BEEF),
     COOKED_CHICKEN("cooked chicken", Material.COOKED_CHICKEN),
     COOKED_COD("cooked cod", Material.COOKED_COD),

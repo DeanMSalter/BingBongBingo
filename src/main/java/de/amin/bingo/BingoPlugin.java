@@ -17,6 +17,10 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.WorldBorder;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -36,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public final class BingoPlugin extends JavaPlugin {
@@ -73,7 +78,28 @@ public final class BingoPlugin extends JavaPlugin {
 
 
     }
-
+    public static Location findLocation(World world){
+        WorldBorder worldBorder = world.getWorldBorder();
+        double X = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getX(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
+        double Z = ThreadLocalRandom.current().nextDouble(worldBorder.getCenter().getZ(), worldBorder.getSize()/2 - worldBorder.getSize() * 0.1 + 1);
+        double Y = world.getHighestBlockYAt((int) X, (int) Z);
+        return new Location(world,X,Y, Z);
+    }
+    public static boolean isSafeLocation(Location location) {
+        Block feet = location.getBlock();
+        if (!feet.isPassable() && !feet.getLocation().add(0, 1, 0).getBlock().isPassable()) {
+            return false; // not transparent (will suffocate)
+        }
+        Block head = feet.getRelative(BlockFace.UP);
+        if (!head.isPassable()) {
+            return false; // not transparent (will suffocate)
+        }
+        Block ground = feet.getRelative(BlockFace.DOWN);
+        if (!ground.getType().isSolid()) {
+            return false; // not solid
+        }
+        return true;
+    }
     public int getHighestID() {
         return highestID;
     }
@@ -85,6 +111,8 @@ public final class BingoPlugin extends JavaPlugin {
         HashMap<Object, BingoBoard> boards = new HashMap<>();
         List<UUID> players = new ArrayList<UUID>();
         HashMap<UUID, Location> positions = new HashMap<>();
+        HashMap<UUID, Location> previousPositions = new HashMap<>();
+
         File gamesFile = new File(INSTANCE.getDataFolder(), "games.yml");
         FileConfiguration gamesConfig = YamlConfiguration.loadConfiguration(gamesFile);
         ConfigurationSection gameSection = gamesConfig.getConfigurationSection(String.valueOf(gameID));
@@ -97,6 +125,16 @@ public final class BingoPlugin extends JavaPlugin {
             Location location = new Location(Bukkit.getWorld(position.getString("WORLD")), position.getDouble("X"),position.getDouble("Y"), position.getDouble("Z"), (float) position.getDouble("YAW"), (float) position.getDouble("PITCH"));
             positions.put(UUID.fromString(key), location);
         }
+
+        ConfigurationSection previousPositionsSection = gameSection.getConfigurationSection("previousPositions");
+        if (previousPositionsSection != null){
+            for(String key : previousPositionsSection.getKeys(false)) {
+                ConfigurationSection position = previousPositionsSection.getConfigurationSection(key);
+                Location location = new Location(Bukkit.getWorld(position.getString("WORLD")), position.getDouble("X"),position.getDouble("Y"), position.getDouble("Z"), (float) position.getDouble("YAW"), (float) position.getDouble("PITCH"));
+                previousPositions.put(UUID.fromString(key), location);
+            }
+        }
+
         List loadedPlayers = gameSection.getList("players");
         for (Object loadedPlayer: loadedPlayers) {
             players.add(UUID.fromString((String) loadedPlayer));
@@ -124,7 +162,10 @@ public final class BingoPlugin extends JavaPlugin {
             }
             boards.put(UUID.fromString(key), bingoBoard);
         }
-        games.put(gameID, new BingoGame(INSTANCE, players, gameID, boards, loadedGameItems, timeLeft, positions, active));
+        games.put(gameID, new BingoGame(INSTANCE, players, gameID, boards, loadedGameItems, timeLeft, positions, active, previousPositions));
+    }
+    public void setGame(int gameID, BingoGame game) {
+        this.games.put(gameID, game);
     }
     public BingoGame getGamePlayerIsIn(Player player){
         for(Map.Entry<Integer, BingoGame> entry : INSTANCE.getGames().entrySet()) {

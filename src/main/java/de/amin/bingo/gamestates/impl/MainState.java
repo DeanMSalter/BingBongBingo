@@ -146,6 +146,7 @@ public class MainState extends GameState {
 
 
                 time--;
+                game.setTimeLeft(time);
             } else {
                 this.game.getPlayers().forEach(playerID -> {
                     Player player = Bukkit.getPlayer(playerID);

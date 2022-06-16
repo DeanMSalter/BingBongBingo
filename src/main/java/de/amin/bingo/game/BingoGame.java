@@ -11,7 +11,6 @@ import de.amin.bingo.gamestates.impl.EndState;
 import de.amin.bingo.gamestates.impl.MainState;
 import de.amin.bingo.gamestates.impl.PauseState;
 import de.amin.bingo.utils.Config;
-import jdk.tools.jmod.Main;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;

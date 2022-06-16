@@ -56,25 +56,6 @@
                     </descriptorRefs>
                 </configuration>
             </plugin>
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-shade-plugin</artifactId>-->
-<!--                <version>3.2.4</version>-->
-<!--                <executions>-->
-<!--                    <execution>-->
-<!--                        <phase>package</phase>-->
-<!--                        <goals>-->
-<!--                            <goal>shade</goal>-->
-<!--                        </goals>-->
-<!--                        <configuration>-->
-<!--                            <finalName>${project.artifactId}-${project.version}-something</finalName>-->
-<!--                            <outputDirectory>../guide</outputDirectory>-->
-<!--&lt;!&ndash;                            <outputFile>${output.directory}\${project.artifactId}-${project.version}.jar</outputFile>&ndash;&gt;-->
-<!--                            <createDependencyReducedPom>false</createDependencyReducedPom>-->
-<!--                        </configuration>-->
-<!--                    </execution>-->
-<!--                </executions>-->
-<!--            </plugin>-->
         </plugins>
         <resources>
             <resource>
